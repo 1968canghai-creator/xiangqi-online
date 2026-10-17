@@ -79,13 +79,12 @@ export class Engine {
 
   /**
    * 让引擎在给定局面上按难度选一步。
-   * @param {object} o  { fen?, moves?: string[], level?: 1..10, limits?: {nodes|depth|movetime}, multipv?, onInfo?,
-   *                      legalMoves?: string[]  // 当前局面全部合法着法（UCI），供低级别随机失误使用 }
+   * @param {object} o  { fen?, moves?: string[], level?: 1..10, limits?: {nodes|depth|movetime}, multipv?, onInfo? }
    */
-  async bestMove({ fen, moves = [], level = 5, limits, multipv, onInfo, legalMoves } = {}) {
+  async bestMove({ fen, moves = [], level = 5, limits, multipv, onInfo } = {}) {
     const cfg = levelConfig(level);
     const mpv = multipv || cfg.multipv;
-    const lim = limits || { nodes: cfg.nodes };
+    const lim = limits || cfg.limits;
     const pos = `position ${fen ? 'fen ' + fen : 'startpos'}${moves.length ? ' moves ' + moves.join(' ') : ''}`;
 
     await this.send(`setoption name MultiPV value ${mpv}`, () => true, 500).catch(() => {});
@@ -106,7 +105,7 @@ export class Engine {
     if (!engineBest || engineBest === '(none)') return { move: null, candidates: [] };
 
     const candidates = collectCandidates(infos, engineBest);
-    const { chosen, chosenIndex, random } = selectMove({ candidates, cfg, engineBest, legalMoves });
+    const { chosen, chosenIndex, random } = selectMove({ candidates, cfg });
     return { move: chosen.move, score: chosen.score, mate: chosen.mate, depth: chosen.depth, pv: chosen.pv, candidates, chosenIndex, engineBest, level: cfg.level, random };
   }
 

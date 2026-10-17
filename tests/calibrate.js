@@ -32,13 +32,13 @@ async function pick(pos, level) {
   engine.uci(`position startpos${pos.history.length ? ' moves ' + pos.uciMoves().join(' ') : ''}`);
   const infos = new Map();
   const start = lines.length;
-  const bm = await send(`go nodes ${cfg.nodes}`, (l) => l.startsWith('bestmove'));
+  const go = 'go ' + Object.entries(cfg.limits).map(([k, v]) => `${k} ${v}`).join(' ');
+  const bm = await send(go, (l) => l.startsWith('bestmove'));
   for (const l of lines.slice(start)) { const i = parseInfoLine(l); if (i) infos.set(i.multipv, i); }
   lines.length = 0;
   const engineBest = bm.split(' ')[1];
   if (!engineBest || engineBest === '(none)') return null;
-  const legal = pos.legalMoves().map(([a, b]) => sqName(a) + sqName(b));
-  const { chosen } = selectMove({ candidates: collectCandidates(infos, engineBest), cfg, engineBest, legalMoves: legal });
+  const { chosen } = selectMove({ candidates: collectCandidates(infos, engineBest), cfg });
   return chosen.move;
 }
 

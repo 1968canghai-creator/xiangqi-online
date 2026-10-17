@@ -103,7 +103,6 @@ async function engineMove() {
   try {
     r = await engine.bestMove({
       moves: state.pos.uciMoves(), level,
-      legalMoves: state.pos.legalMoves().map(([a, b]) => sqName(a) + sqName(b)),
       onInfo: (info) => { if (gen === state.gen) showThinking(info); },
     });
   } catch (e) {
@@ -196,7 +195,8 @@ function showThinking(info) {
 function updateStatus() {
   const pos = state.pos;
   const lvl = effectiveLevel();
-  $('levelTag').textContent = `${lvl} 级 · ${LEVELS[lvl].name}${settings.level === 0 ? '（自动）' : ''}`;
+  const cfg = LEVELS[lvl];
+  $('levelTag').textContent = `${lvl} 级 · ${cfg.name}${settings.level === 0 ? '（自动）' : ''} · ${cfg.limits.depth} 层 / ${cfg.limits.movetime / 1000} 秒`;
   if (!engine.ready) return; // 加载阶段由进度条负责
   if (state.over) {
     const r = state.over;
