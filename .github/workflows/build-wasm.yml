@@ -35,7 +35,9 @@ jobs:
           node --version
           if ! VERBOSE=1 node test/node-test.js ./pikafish.nnue 2 2>&1 | tee smoke.log; then
             echo "::group::smoke test output (tail)"; tail -n 60 smoke.log; echo "::endgroup::"
-            tail -n 25 smoke.log | while IFS= read -r l; do echo "::warning title=smoke-test::$l"; done
+            # GitHub shows at most 10 annotations per level: last 8 lines as errors, the 10 before as warnings
+            tail -n 18 smoke.log | head -n 10 | while IFS= read -r l; do echo "::warning title=smoke-test::$l"; done
+            tail -n 8 smoke.log | while IFS= read -r l; do echo "::error title=smoke-test::$l"; done
             exit 1
           fi
 
