@@ -26,6 +26,7 @@ node pikafish-web/demo/serve.js 8080 public   # 带 COOP/COEP 头的本地静态
 npm test                                   # 规则库：perft(1..3) 对比标准值 + 规则点
 node tests/rules.test.js 4                 # 含 perft(4) = 3,290,240
 node tests/e2e.play.js                     # 无头 Chromium 端到端对弈（需 playwright 与 public/）
+node tests/calibrate.js <pikafish.nnue> 3 4 20   # 难度标定：3 级 vs 4 级互弈 20 局
 node pikafish-web/test/node-test.js <pikafish.nnue> 2   # 引擎 WASM 冒烟测试
 ```
 
@@ -48,7 +49,8 @@ Workers & Pages → Create → Pages → Connect to Git → 选择本仓库，�
 | 目录 | 内容 |
 |---|---|
 | `site/js/xiangqi.js` | 规则库：走法生成、将军/合法性、终局判定、中文记谱 |
-| `site/js/engine.js` / `engine-worker.js` | 引擎控制层：Worker 封装、权重分块加载、难度分级选着 |
+| `site/js/levels.js` | 难度表与选着逻辑（nodes / MultiPV / 温度 / 随机失误率），网页与标定脚本共用 |
+| `site/js/engine.js` / `engine-worker.js` | 引擎控制层：Worker 封装、权重分块加载 |
 | `site/js/board.js` / `app.js` | SVG 棋盘与对弈页面 |
 | `tests/` | 规则测试与端到端测试 |
 

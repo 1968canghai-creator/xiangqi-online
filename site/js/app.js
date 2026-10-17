@@ -103,6 +103,7 @@ async function engineMove() {
   try {
     r = await engine.bestMove({
       moves: state.pos.uciMoves(), level,
+      legalMoves: state.pos.legalMoves().map(([a, b]) => sqName(a) + sqName(b)),
       onInfo: (info) => { if (gen === state.gen) showThinking(info); },
     });
   } catch (e) {
@@ -206,7 +207,8 @@ function updateStatus() {
     return;
   }
   if (state.thinking) { setStatus('引擎思考中…', 'thinking'); return; }
-  $('think').textContent = state.lastEval ? `上一步引擎评估 ${(state.lastEval.score / 100).toFixed(2)}（引擎视角）· 深度 ${state.lastEval.depth}` : '';
+  const le = state.lastEval;
+  $('think').textContent = le && le.score != null ? `上一步引擎评估 ${(le.score / 100).toFixed(2)}（引擎视角）· 深度 ${le.depth}` : '';
   const chk = pos.inCheck() ? '，将军！' : '';
   setStatus(pos.turn === state.humanColor ? `轮到你走（${state.humanColor === RED ? '红' : '黑'}方）${chk}` : '引擎走子…');
 }
