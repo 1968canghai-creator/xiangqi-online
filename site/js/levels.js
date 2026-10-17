@@ -1,26 +1,30 @@
 // levels.js — 难度分级表与选着逻辑（纯函数，浏览器 / Node 通用，供 engine.js 与离线标定脚本共用）
 //
-// Pikafish 没有 Skill Level / UCI_Elo。每一级由两个指标限制搜索，先到者为准（UCI: go depth N movetime M）：
-//   depth    —— 搜索层数上限：决定它能看多远。浅层看不到两三步以外的战术（抽将、捉双、闪击），
+// Pikafish 没有 Skill Level / UCI_Elo。实测（tests/measure-levels.js）表明 1–9 级的强度完全由搜索层数决定：
+// 引擎到达设定层数只需几毫秒到零点几秒，时间限制在 1–9 级从不触发，只在 10 级（和很慢的手机上）起作用。
+//   depth    —— 搜索层数上限 = 强度旋钮。浅层看不到两三步以外的战术（抽将、捉双、闪击），
 //               但静态搜索仍会算清直接吃子，所以不会无缘无故白送子——像一个棋力有限的人。
-//   movetime —— 思考时间上限（毫秒）：慢设备上的保底，也决定高级别的实际强度。
-// 另有两个只影响“风格”的参数：
+//   movetime —— 思考时间上限（毫秒）：只是响应时间的保底，不是强度旋钮。
+// 只影响“风格”的参数：
 //   multipv  —— 候选着法个数；
-//   noiseCp  —— 给候选分数加的高斯噪声（厘兵），用于让同一局面不总走同一步。数值远小于一个子的价值，
+//   noiseCp  —— 给候选分数加的高斯噪声（厘兵），让同一局面不总走同一步。数值远小于一个子的价值，
 //               不会造成送子；9、10 级为 0，完全确定性。
 // 不使用“随机合法着法”——那会让引擎像喝醉一样送子。
+//
+// 各级互弈（tests/calibrate.js，每对 12–16 局）测得的相邻级别 Elo 差，仅为引擎间相对值，不等于人类等级分：
+//   1→2 ≈220  2→3 ≈255  3→4 ≈390  4→5 ≈200*  5→6 ≈200*  6→8 ≈280  8→11 ≈300*  11→15 ≈250*  （*为按层数内插的估计）
 
 export const LEVELS = [
   null,
-  { level: 1,  name: '入门',  limits: { depth: 1,  movetime: 100 },  multipv: 6, noiseCp: 120 },
-  { level: 2,  name: '初学',  limits: { depth: 2,  movetime: 200 },  multipv: 5, noiseCp: 90 },
-  { level: 3,  name: '新手',  limits: { depth: 3,  movetime: 300 },  multipv: 4, noiseCp: 70 },
-  { level: 4,  name: '业余',  limits: { depth: 4,  movetime: 400 },  multipv: 4, noiseCp: 50 },
-  { level: 5,  name: '进阶',  limits: { depth: 6,  movetime: 600 },  multipv: 3, noiseCp: 35 },
-  { level: 6,  name: '熟练',  limits: { depth: 8,  movetime: 800 },  multipv: 3, noiseCp: 25 },
-  { level: 7,  name: '高手',  limits: { depth: 10, movetime: 1000 }, multipv: 2, noiseCp: 15 },
-  { level: 8,  name: '大师',  limits: { depth: 13, movetime: 1500 }, multipv: 2, noiseCp: 10 },
-  { level: 9,  name: '特级',  limits: { depth: 16, movetime: 2500 }, multipv: 1, noiseCp: 0 },
+  { level: 1,  name: '入门',  limits: { depth: 1,  movetime: 1000 }, multipv: 6, noiseCp: 120 },
+  { level: 2,  name: '初学',  limits: { depth: 2,  movetime: 1000 }, multipv: 5, noiseCp: 90 },
+  { level: 3,  name: '新手',  limits: { depth: 3,  movetime: 1000 }, multipv: 4, noiseCp: 70 },
+  { level: 4,  name: '业余',  limits: { depth: 4,  movetime: 1000 }, multipv: 4, noiseCp: 50 },
+  { level: 5,  name: '进阶',  limits: { depth: 5,  movetime: 1000 }, multipv: 3, noiseCp: 40 },
+  { level: 6,  name: '熟练',  limits: { depth: 6,  movetime: 1000 }, multipv: 3, noiseCp: 30 },
+  { level: 7,  name: '高手',  limits: { depth: 8,  movetime: 2000 }, multipv: 2, noiseCp: 20 },
+  { level: 8,  name: '大师',  limits: { depth: 11, movetime: 3000 }, multipv: 2, noiseCp: 10 },
+  { level: 9,  name: '特级',  limits: { depth: 15, movetime: 5000 }, multipv: 1, noiseCp: 0 },
   { level: 10, name: '满级',  limits: { depth: 30, movetime: 5000 }, multipv: 1, noiseCp: 0 },
 ];
 

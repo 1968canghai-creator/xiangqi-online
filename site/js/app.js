@@ -196,7 +196,7 @@ function updateStatus() {
   const pos = state.pos;
   const lvl = effectiveLevel();
   const cfg = LEVELS[lvl];
-  $('levelTag').textContent = `${lvl} 级 · ${cfg.name}${settings.level === 0 ? '（自动）' : ''} · ${cfg.limits.depth} 层 / ${cfg.limits.movetime / 1000} 秒`;
+  $('levelTag').textContent = `${lvl} 级 · ${cfg.name}${settings.level === 0 ? '（自动）' : ''} · ${lvl >= 10 ? `最多 ${cfg.limits.movetime / 1000} 秒` : `搜索 ${cfg.limits.depth} 层`}`;
   if (!engine.ready) return; // 加载阶段由进度条负责
   if (state.over) {
     const r = state.over;
