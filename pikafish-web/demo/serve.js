@@ -1,13 +1,13 @@
 // Minimal static server for local testing. Sends the COOP/COEP headers that
 // SharedArrayBuffer (and therefore the multi-threaded wasm build) requires.
-//   node demo/serve.js [port]      -> http://localhost:8080/demo/
+//   node demo/serve.js [port] [root]   -> http://localhost:8080/demo/  (root defaults to pikafish-web/)
 'use strict';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const root = path.resolve(__dirname, '..');
 const port = Number(process.argv[2] || 8080);
+const root = path.resolve(process.argv[3] || path.join(__dirname, '..'));
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.wasm': 'application/wasm',
   '.nnue': 'application/octet-stream', '.json': 'application/json', '.css': 'text/css' };
 
@@ -26,4 +26,4 @@ http.createServer((req, res) => {
     'Cache-Control': 'no-cache',
   });
   fs.createReadStream(file).pipe(res);
-}).listen(port, () => console.log(`http://localhost:${port}/demo/`));
+}).listen(port, () => console.log(`serving ${root} at http://localhost:${port}/`));

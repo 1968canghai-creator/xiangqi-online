@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>在线象棋 · 人机对弈</title>
+<meta name="description" content="在浏览器里与皮卡鱼（Pikafish）引擎下中国象棋，可选难度，自动评级。">
+<meta name="theme-color" content="#5a3b1e">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%23f7ecd3' stroke='%23b8332a' stroke-width='6'/%3E%3Ctext x='50' y='56' font-size='54' text-anchor='middle' dominant-baseline='middle' fill='%23b8332a' font-family='KaiTi,serif' font-weight='700'%3E帅%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="top">
+  <h1>在线象棋</h1>
+  <span class="sub">人机对弈 · 引擎：皮卡鱼 Pikafish（浏览器本地运行）</span>
+</header>
+
+<main class="layout">
+  <section class="board-wrap">
+    <svg id="board" class="board" role="img" aria-label="象棋棋盘"></svg>
+    <div id="loader" class="loader">
+      <progress id="progress" max="100" value="0"></progress>
+      <div id="progressText">加载引擎…</div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div id="status" class="status">加载中…</div>
+    <div id="think" class="think"></div>
+
+    <div class="controls">
+      <label>难度 <select id="level"></select></label>
+      <span id="levelTag" class="tag"></span>
+      <label>执子 <select id="side"><option value="red">红方（先手）</option><option value="black">黑方（后手）</option><option value="random">随机</option></select></label>
+      <label>引擎 <select id="threads"></select></label>
+    </div>
+    <div class="buttons">
+      <button id="btnNew" class="primary">新对局</button>
+      <button id="btnUndo" disabled>悔棋</button>
+      <button id="btnFlip">翻转棋盘</button>
+      <button id="btnResign">认输</button>
+    </div>
+
+    <div class="moves-wrap">
+      <table class="moves"><tbody id="moves"></tbody></table>
+    </div>
+
+    <details class="help">
+      <summary>说明</summary>
+      <ul>
+        <li>点选己方棋子，再点目标位置落子；可落点以圆点标出。</li>
+        <li>难度 1–10 级由搜索量与随机性控制；选“自动”时按你的胜负自动升降级。</li>
+        <li>引擎与 48 MB 神经网络权重只在首次访问时下载，之后离线也能下。</li>
+        <li>规则：无子可走判负、长将判负、其它重复局面判和、六十回合无吃子判和。</li>
+      </ul>
+    </details>
+  </aside>
+</main>
+
+<footer class="foot">
+  引擎 <a href="https://github.com/official-pikafish/Pikafish" target="_blank" rel="noopener">Pikafish</a>（GPL-3.0）·
+  <a href="https://github.com/1968canghai-creator/xiangqi-online" target="_blank" rel="noopener">源码</a>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

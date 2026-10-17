@@ -1,0 +1,7 @@
+{
+  "name": "pikafish-web",
+  "private": true,
+  "type": "commonjs",
+  "description": "Pikafish xiangqi engine compiled to WebAssembly (GPL-3.0)",
+  "license": "GPL-3.0"
+}

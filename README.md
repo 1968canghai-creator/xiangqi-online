@@ -20,10 +20,37 @@ node pikafish-web/demo/serve.js 8080 public   # 带 COOP/COEP 头的本地静态
 # 打开 http://localhost:8080/
 ```
 
+## 测试
+
+```bash
+npm test                                   # 规则库：perft(1..3) 对比标准值 + 规则点
+node tests/rules.test.js 4                 # 含 perft(4) = 3,290,240
+node tests/e2e.play.js                     # 无头 Chromium 端到端对弈（需 playwright 与 public/）
+node pikafish-web/test/node-test.js <pikafish.nnue> 2   # 引擎 WASM 冒烟测试
+```
+
 ## 部署（Cloudflare Pages）
 
-Connect to Git → 选择本仓库 → 构建命令 `bash scripts/build-site.sh`，输出目录 `public`。
-`site/_headers` 已配置 wasm 多线程所需的 COOP/COEP 响应头与缓存策略。
+Workers & Pages → Create → Pages → Connect to Git → 选择本仓库，构建设置：
+
+| 项 | 值 |
+|---|---|
+| Framework preset | None |
+| Build command | `bash scripts/build-site.sh` |
+| Build output directory | `public` |
+| 环境变量 | 不需要 |
+
+`site/_headers` 已配置 wasm 多线程所需的 COOP/COEP 响应头与缓存策略；
+48 MB 权重在构建时下载并切成 20 MiB 分块（Cloudflare 单文件上限 25 MiB），浏览器端用 Cache API 缓存。
+
+## 目录（补充）
+
+| 目录 | 内容 |
+|---|---|
+| `site/js/xiangqi.js` | 规则库：走法生成、将军/合法性、终局判定、中文记谱 |
+| `site/js/engine.js` / `engine-worker.js` | 引擎控制层：Worker 封装、权重分块加载、难度分级选着 |
+| `site/js/board.js` / `app.js` | SVG 棋盘与对弈页面 |
+| `tests/` | 规则测试与端到端测试 |
 
 ## 许可
 

@@ -1,0 +1,10 @@
+{
+  "name": "xiangqi-online",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/rules.test.js",
+    "build": "bash scripts/build-site.sh",
+    "serve": "node pikafish-web/demo/serve.js 8080 public"
+  }
+}

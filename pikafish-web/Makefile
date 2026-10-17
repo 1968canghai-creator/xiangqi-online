@@ -13,6 +13,12 @@ BUILD    := build
 
 CXX := em++
 
+# Stack-size setting was renamed in Emscripten 3.1.27 (TOTAL_STACK -> STACK_SIZE); -sSTRICT rejects the legacy name.
+EMCC_VERSION := $(shell $(CXX) --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+STACK_FLAG := $(shell v="$(EMCC_VERSION)"; maj=$${v%%.*}; r=$${v#*.}; min=$${r%%.*}; tiny=$${r##*.}; \
+	if [ -n "$$v" ] && { [ "$$maj" -gt 3 ] || { [ "$$maj" -eq 3 ] && { [ "$$min" -gt 1 ] || { [ "$$min" -eq 1 ] && [ "$$tiny" -ge 27 ]; }; }; }; }; \
+	then echo -sSTACK_SIZE=3MB; else echo -sTOTAL_STACK=3MB; fi)
+
 # Mirrors `make ARCH=wasm32` in Pikafish's own Makefile (minus -m64, which emcc rejects/ignores).
 CXXFLAGS := -std=c++17 -O3 -DNDEBUG -fno-exceptions -funroll-loops -flto=full \
 	-Wall -Wcast-qual -Wextra -Wshadow -flax-vector-conversions=none \
@@ -26,7 +32,7 @@ LDFLAGS := -pthread -sPROXY_TO_PTHREAD -sALLOW_BLOCKING_ON_MAIN_THREAD=0 \
 	-sEXPORTED_FUNCTIONS='[_malloc,_main]' \
 	-sEXPORTED_RUNTIME_METHODS='[stringToUTF8,UTF8ToString,lengthBytesUTF8]' \
 	-sINCOMING_MODULE_JS_API='[locateFile,print,printErr,wasmMemory,buffer,instantiateWasm,wasmBinary,mainScriptUrlOrBlob,onExit,onAbort,noExitRuntime]' \
-	-sINITIAL_MEMORY=192MB -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=2GB -sTOTAL_STACK=3MB \
+	-sINITIAL_MEMORY=192MB -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=2GB $(STACK_FLAG) \
 	-sEXIT_RUNTIME -sSTRICT -Wno-pthreads-mem-growth \
 	--pre-js=src/pre.js \
 	$(EXTRA_LDFLAGS)

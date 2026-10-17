@@ -5,3 +5,4 @@ node_modules/
 *.nnue
 pikafish-web/third_party/
 pikafish-web/build/
+tests/*.png

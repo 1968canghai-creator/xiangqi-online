@@ -1,0 +1,20 @@
+# Cloudflare Pages 响应头
+# 1) wasm 多线程需要 SharedArrayBuffer -> 页面必须 cross-origin isolated
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# 2) 权重分块文件名含哈希，可永久缓存；引擎脚本短缓存
+/engine/*.part*
+  Cache-Control: public, max-age=31536000, immutable
+/engine/nnue-manifest.json
+  Cache-Control: no-cache
+/engine/pikafish.js
+  Cache-Control: public, max-age=3600
+/engine/pikafish.wasm
+  Cache-Control: public, max-age=3600
+/engine/pikafish.worker.js
+  Cache-Control: public, max-age=3600
