@@ -29,7 +29,15 @@ jobs:
         run: curl -sSL -o pikafish.nnue https://github.com/official-pikafish/Networks/releases/download/master-net/pikafish.nnue
 
       - name: Smoke test (Node)
-        run: node test/node-test.js ./pikafish.nnue 2
+        shell: bash
+        run: |
+          set -o pipefail
+          node --version
+          if ! VERBOSE=1 node test/node-test.js ./pikafish.nnue 2 2>&1 | tee smoke.log; then
+            echo "::group::smoke test output (tail)"; tail -n 60 smoke.log; echo "::endgroup::"
+            tail -n 25 smoke.log | while IFS= read -r l; do echo "::warning title=smoke-test::$l"; done
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
