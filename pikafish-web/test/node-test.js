@@ -39,14 +39,19 @@ function main() {
     console.log('  options:', lines.filter((l) => l.startsWith('option name')).map((l) => l.split(' ')[2]).join(', '));
     console.log('  recommended net:', engine.getRecommendedNnue());
 
+    // 分两步确认：先加载权重，再开线程，便于定位问题
     const t1 = Date.now();
     const buf = fs.readFileSync(nnuePath);
     engine.setNnueBuffer(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
+    engine.uci('isready');
+    await waitFor((l) => l === 'readyok', 120000);
+    console.log(`✓ NNUE loaded (${(buf.length / 1048576).toFixed(1)} MB compressed) (${Date.now() - t1} ms)`);
+    const t1b = Date.now();
     engine.uci(`setoption name Threads value ${threads}`);
     engine.uci('setoption name Hash value 32');
     engine.uci('isready');
     await waitFor((l) => l === 'readyok', 120000);
-    console.log(`✓ NNUE loaded (${(buf.length / 1048576).toFixed(1)} MB compressed) + ${threads} thread(s) ready (${Date.now() - t1} ms)`);
+    console.log(`✓ ${threads} thread(s) + 32 MB hash ready (${Date.now() - t1b} ms)`);
 
     // 1) fixed-depth search from the start position
     engine.uci('ucinewgame');
