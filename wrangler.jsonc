@@ -1,0 +1,15 @@
+// Cloudflare Workers（静态资源模式）配置：与 Pages 二选一均可部署本站。
+// 新版控制台 "Create an app → Connect GitHub" 走的是 Worker 流程，会读取这个文件：
+//   Build command:  bash scripts/build-site.sh
+//   Deploy command: npx wrangler deploy
+// public/_headers 与 public/_redirects 在静态资源模式下同样生效（COOP/COEP 响应头）。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "xiangqi-online",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  }
+}
