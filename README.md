@@ -3,7 +3,7 @@
 网页版中国象棋对弈平台。引擎 [Pikafish](https://github.com/official-pikafish/Pikafish)（皮卡鱼）编译为 WebAssembly 直接在浏览器里运行，
 不需要引擎服务器；可选难度，不选难度时按对局成绩自动评级并匹配强度；注册登录后保存棋谱并复盘。
 
-状态：开发中（2026-10）。
+线上地址：**https://xiangqi.zenkey.info**（备用：https://xiangqi-online-6e4.pages.dev）· 状态：开发中（2026-10）。
 
 | 目录 | 内容 |
 |---|---|
