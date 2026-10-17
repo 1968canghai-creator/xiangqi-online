@@ -1,0 +1,7 @@
+build/
+third_party/
+nnue/
+nnue
+*.log
+node_modules/
+*.nnue

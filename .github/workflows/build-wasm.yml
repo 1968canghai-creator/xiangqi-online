@@ -1,0 +1,44 @@
+# Builds the Pikafish WebAssembly engine with the official Emscripten SDK and
+# publishes dist/ as a workflow artifact (and attaches it to a GitHub Release on tags).
+name: build-pikafish-wasm
+
+on:
+  push:
+    paths: ['pikafish-web/**', '.github/workflows/build-wasm.yml']
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: pikafish-web }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74        # any 3.1.x / 4.x works; pinned for reproducible builds
+          actions-cache-folder: emsdk-cache
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Download network for the smoke test
+        run: curl -sSL -o pikafish.nnue https://github.com/official-pikafish/Networks/releases/download/master-net/pikafish.nnue
+
+      - name: Smoke test (Node)
+        run: node test/node-test.js ./pikafish.nnue 2
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pikafish-wasm
+          path: pikafish-web/dist/      # pikafish.js + pikafish.wasm (+ pikafish.worker.js on older emsdk)
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: pikafish-web/dist/*

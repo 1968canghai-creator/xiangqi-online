@@ -1,0 +1,244 @@
+diff --git a/src/engine.cpp b/src/engine.cpp
+index 823df28..f3f91d5 100644
+--- a/src/engine.cpp
++++ b/src/engine.cpp
+@@ -229,6 +229,17 @@ void Engine::set_ponderhit(bool b) { threads.main_manager()->ponder = b; }
+ 
+ // network related
+ 
++void Engine::load_network_stream(std::istream& compressed) {
++    std::stringstream raw = read_compressed_nnue(compressed);
++    network.modify_and_replicate([this, &raw](NN::Network& network_) {
++        raw.clear();
++        raw.seekg(0);
++        network_.load_raw(raw, networkFile);
++    });
++    threads.clear();
++    threads.ensure_network_replicated();
++}
++
+ void Engine::verify_network() const {
+     const auto file = path_from_utf8(std::string(options["EvalFile"]));
+     network->verify(onVerifyNetwork, networkFile, file);
+diff --git a/src/engine.h b/src/engine.h
+index 7ae62b1..d17a26f 100644
+--- a/src/engine.h
++++ b/src/engine.h
+@@ -19,6 +19,7 @@
+ #ifndef ENGINE_H_INCLUDED
+ #define ENGINE_H_INCLUDED
+ 
++#include <iosfwd>
+ #include <functional>
+ #include <filesystem>
+ #include <map>
+@@ -96,6 +97,7 @@ class Engine {
+     void                                 verify_network() const;
+     std::unique_ptr<Eval::NNUE::Network> get_default_network();
+     void                                 load_network(const std::filesystem::path& file);
++    void                                 load_network_stream(std::istream& compressed);
+     void save_network(const std::optional<std::filesystem::path>& file);
+ 
+     // utility functions
+diff --git a/src/main.cpp b/src/main.cpp
+index 57667d1..5144c65 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -28,6 +28,10 @@
+ 
+ using namespace Stockfish;
+ 
++#ifdef __EMSCRIPTEN__
++UCIEngine* uci_global = nullptr;
++#endif
++
+ #ifdef UNIVERSAL_BINARY
+ namespace Stockfish {
+ 
+@@ -44,10 +48,16 @@ int main(int argc, char* argv[]) {
+ 
+     auto cli = CommandLine(argc, argv);
+     auto uci = std::make_unique<UCIEngine>(std::move(cli));
++#ifdef __EMSCRIPTEN__
++    uci_global = uci.get();
++#endif
+ 
+     Tune::init(uci->engine_options());
+ 
+     uci->loop();
++#ifdef __EMSCRIPTEN__
++    uci_global = nullptr;
++#endif
+ 
+     return 0;
+ }
+diff --git a/src/misc.cpp b/src/misc.cpp
+index 9ac54ec..3865b31 100644
+--- a/src/misc.cpp
++++ b/src/misc.cpp
+@@ -637,11 +637,14 @@ void set_console_utf8() {
+ }
+ 
+ std::stringstream read_compressed_nnue(const std::filesystem::path& fpath) {
+-    std::stringstream ss;
+-
+     std::ifstream fin(fpath, std::ios::binary);
+     if (!fin)
+-        return ss;
++        return std::stringstream();
++    return read_compressed_nnue(fin);
++}
++
++std::stringstream read_compressed_nnue(std::istream& fin) {
++    std::stringstream ss;
+     std::vector<char> buffIn(ZSTD_DStreamInSize()), buffOut(ZSTD_DStreamOutSize());
+     auto              dctxDeleter = [&](auto* p) {
+         if (p)
+diff --git a/src/misc.h b/src/misc.h
+index c02fb18..620468e 100644
+--- a/src/misc.h
++++ b/src/misc.h
+@@ -596,6 +596,7 @@ void move_to_front(std::vector<T>& vec, Predicate pred) {
+ void set_console_utf8();
+ 
+ std::stringstream read_compressed_nnue(const std::filesystem::path& fpath);
++std::stringstream read_compressed_nnue(std::istream& fin);
+ }  // namespace Stockfish
+ 
+ #endif  // #ifndef MISC_H_INCLUDED
+diff --git a/src/nnue/network.cpp b/src/nnue/network.cpp
+index 83eeaaf..d2145ac 100644
+--- a/src/nnue/network.cpp
++++ b/src/nnue/network.cpp
+@@ -156,7 +156,11 @@ void Network::verify(const std::function<void(std::string_view)>& f,
+             f(msg);
+         }
+ 
++#ifdef __EMSCRIPTEN__
++        return;
++#else
+         exit(EXIT_FAILURE);
++#endif
+     }
+ 
+     if (f)
+@@ -198,6 +202,16 @@ NnueEvalTrace Network::trace_evaluate(const Position&    pos,
+ }
+ 
+ 
++void Network::load_raw(std::istream& raw, EvalFile& evalFile) {
++    auto description = load(raw);
++
++    if (description.has_value())
++    {
++        evalFile.current        = fs::path(evalFile.defaultName);
++        evalFile.netDescription = description.value();
++    }
++}
++
+ void Network::load_external(const fs::path& dir, const fs::path& evalfilePath, EvalFile& evalFile) {
+     std::stringstream stream(read_compressed_nnue(dir / evalfilePath));
+     auto              description = load(stream);
+diff --git a/src/nnue/network.h b/src/nnue/network.h
+index 1d9ccab..5aa1657 100644
+--- a/src/nnue/network.h
++++ b/src/nnue/network.h
+@@ -19,6 +19,7 @@
+ #ifndef NETWORK_H_INCLUDED
+ #define NETWORK_H_INCLUDED
+ 
++#include <iosfwd>
+ #include <functional>
+ #include <iostream>
+ #include <memory>
+@@ -76,6 +77,7 @@ class Network {
+                                  AccumulatorCaches& cache) const;
+ 
+     void load_external(const std::filesystem::path&, const std::filesystem::path&, EvalFile&);
++    void load_raw(std::istream&, EvalFile&);
+ 
+    private:
+     void initialize();
+diff --git a/src/thread_native.h b/src/thread_native.h
+index fce1c87..3dc9c07 100644
+--- a/src/thread_native.h
++++ b/src/thread_native.h
+@@ -85,7 +85,13 @@ class NativeThread {
+     pthread_t thread;
+     bool      running_ = false;
+ 
++#ifdef __EMSCRIPTEN__
++    // WebAssembly has no virtual memory: the whole stack is carved out of linear
++    // memory eagerly, so keep it smaller than the 8MB Linux default.
++    static constexpr usize TH_STACK_SIZE = 4 * 1024 * 1024;
++#else
+     static constexpr usize TH_STACK_SIZE = 8 * 1024 * 1024;
++#endif
+ 
+     void start(NativeThreadOptions options, ThreadCallableBase* func) {
+         pthread_attr_t attr_storage, *attr = &attr_storage;
+diff --git a/src/timeman.h b/src/timeman.h
+index 7af88aa..e030aef 100644
+--- a/src/timeman.h
++++ b/src/timeman.h
+@@ -20,6 +20,7 @@
+ #define TIMEMAN_H_INCLUDED
+ 
+ 
++#include <algorithm>
+ #include <limits>
+ 
+ #include "misc.h"
+@@ -49,7 +50,11 @@ class TimeManagement {
+     TimePoint elapsed(FUNC nodes) const {
+         return useNodesTime ? TimePoint(nodes()) : elapsed_time();
+     }
++#ifdef __EMSCRIPTEN__
++    TimePoint elapsed_time() const { return std::max(now() - startTime, TimePoint(1)); }
++#else
+     TimePoint elapsed_time() const { return now() - startTime; }
++#endif
+ 
+     void clear();
+     void advance_nodes_time(i64 nodes);
+diff --git a/src/uci.cpp b/src/uci.cpp
+index 261ca39..be29ff0 100644
+--- a/src/uci.cpp
++++ b/src/uci.cpp
+@@ -42,6 +42,10 @@
+ #include "types.h"
+ #include "ucioption.h"
+ 
++#ifdef __EMSCRIPTEN__
++std::string js_getline();  // pikafish-web glue.cpp
++#endif
++
+ namespace Stockfish {
+ 
+ using Time = std::chrono::steady_clock;
+@@ -100,9 +104,13 @@ void UCIEngine::loop() {
+ 
+     do
+     {
++#ifdef __EMSCRIPTEN__
++        cmd = js_getline();  // blocks the engine pthread until JS posts a command
++#else
+         if (cli.argc == 1
+             && !getline(std::cin, cmd))  // Wait for an input or an end-of-file (EOF) indication
+             cmd = "quit";
++#endif
+ 
+         currentCmd = cmd;
+         std::istringstream is(cmd);
+diff --git a/src/uci.h b/src/uci.h
+index 910fcc9..7ffe983 100644
+--- a/src/uci.h
++++ b/src/uci.h
+@@ -54,6 +54,7 @@ class UCIEngine {
+     Search::LimitsType parse_limits(std::istream& is);
+ 
+     auto& engine_options() { return engine.get_options(); }
++    Engine& get_engine() { return engine; }
+ 
+    private:
+     Engine      engine;

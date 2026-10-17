@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pikafish WASM 引擎自测</title>
+<style>
+  :root { color-scheme: light dark; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  body { margin: 0; padding: 16px; max-width: 900px; margin-inline: auto; }
+  h1 { font-size: 1.25rem; margin: 0 0 8px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  button, input, select { font: inherit; padding: 6px 10px; }
+  input[type=text] { flex: 1; min-width: 240px; }
+  #status { font-size: .9rem; opacity: .8; }
+  #best { font-size: 1.4rem; font-weight: 600; margin: 8px 0; }
+  pre { background: #0001; padding: 8px; height: 320px; overflow: auto; font-size: 12px; line-height: 1.35; white-space: pre-wrap; }
+  @media (prefers-color-scheme: dark) { pre { background: #fff1; } }
+  .warn { color: #c0392b; }
+</style>
+</head>
+<body>
+<h1>Pikafish WebAssembly 引擎自测</h1>
+<div id="status">正在初始化…</div>
+<div class="row">
+  <label>线程 <select id="threads"></select></label>
+  <button id="btnStart" disabled>起始局面 go depth 12</button>
+  <button id="btnTime" disabled>go movetime 1000</button>
+  <button id="btnStop" disabled>stop</button>
+</div>
+<div class="row">
+  <input id="cmd" type="text" placeholder="手动输入 UCI 命令，例如 position startpos moves h2e2 / go depth 8" disabled>
+  <button id="btnSend" disabled>发送</button>
+</div>
+<div id="best"></div>
+<pre id="log"></pre>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const log = $('log'), status = $('status'), best = $('best');
+  const say = (s, cls) => { status.textContent = s; status.className = cls || ''; };
+  const append = (line) => {
+    log.textContent += line + '\n';
+    if (log.textContent.length > 200000) log.textContent = log.textContent.slice(-100000);
+    log.scrollTop = log.scrollHeight;
+    if (line.startsWith('bestmove')) best.textContent = line;
+  };
+
+  if (!self.crossOriginIsolated) {
+    say('页面没有 cross-origin isolation（缺少 COOP/COEP 响应头），SharedArrayBuffer 不可用，多线程 wasm 无法启动。', 'warn');
+    append('提示：本地测试请用 demo/serve.js 启动；部署到 GitHub Pages 需加 coi-serviceworker，或改用能设置响应头的托管（Cloudflare Pages / Netlify / Vercel）。');
+    return;
+  }
+
+  const hw = navigator.hardwareConcurrency || 2;
+  for (let i = 1; i <= Math.max(1, Math.min(8, hw - 1)); i++) $('threads').append(new Option(i, i));
+
+  const worker = new Worker('engine-worker.js');
+  const send = (cmd) => { append('> ' + cmd); worker.postMessage({ type: 'uci', cmd }); };
+  worker.onmessage = (ev) => {
+    const m = ev.data;
+    if (m.type === 'line') append(m.line);
+    else if (m.type === 'status') say(m.text);
+    else if (m.type === 'error') { say('错误：' + m.text, 'warn'); append('[error] ' + m.text); }
+    else if (m.type === 'ready') {
+      say('引擎就绪（网络已加载）。');
+      for (const id of ['btnStart', 'btnTime', 'btnStop', 'cmd', 'btnSend']) $(id).disabled = false;
+      document.body.dataset.ready = '1';
+    }
+  };
+  worker.onerror = (e) => say('Worker 错误：' + e.message, 'warn');
+
+  $('threads').onchange = () => send(`setoption name Threads value ${$('threads').value}`);
+  $('btnStart').onclick = () => { best.textContent = ''; send('position startpos'); send('go depth 12'); };
+  $('btnTime').onclick = () => { best.textContent = ''; send('go movetime 1000'); };
+  $('btnStop').onclick = () => send('stop');
+  $('btnSend').onclick = () => { const c = $('cmd').value.trim(); if (c) { send(c); $('cmd').value = ''; } };
+  $('cmd').onkeydown = (e) => { if (e.key === 'Enter') $('btnSend').click(); };
+
+  worker.postMessage({ type: 'init', dist: '../dist/', nnue: '../nnue/pikafish.nnue', threads: 1 });
+})();
+</script>
+</body>
+</html>

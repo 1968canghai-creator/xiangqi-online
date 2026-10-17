@@ -1,0 +1,7 @@
+.cache/
+public/
+node_modules/
+*.log
+*.nnue
+pikafish-web/third_party/
+pikafish-web/build/
